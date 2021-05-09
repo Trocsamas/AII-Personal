@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Universidades
+{% endblock title %}
+
+{% block content %}
+<table style="width:100%">
+    <tr>
+        <th>Logo</th>
+        <th>Nombre</th>
+        <th>Localidad</th>
+    </tr>
+{% for universidad in universidades %}
+    <tr>
+        <td><img class="img-fluid img-thumbnail" src='/media/{{universidad.logo}}'/></td>
+        <td>{{universidad.name}}</td>
+        <td>{{universidad.localidad}}</td>
+    </tr>
+{% endfor %}
+</table> 
+
+{% endblock content %}

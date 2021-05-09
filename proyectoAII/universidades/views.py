@@ -1,0 +1,58 @@
+from django.shortcuts import render, redirect
+from django.views.generic import DetailView
+
+
+from .models import Universidad, Grado, Centro
+from .forms import UniversidadChoiceForm, CentroChoiceForm
+from .utils import populate_bd
+import pandas as pd
+
+
+
+# Create your views here.
+def home_view(request):
+    return render(request, 'universidades/home.html', {})
+
+def universities_list(request):
+    universidades_qs = Universidad.objects.all()
+    #De momento está simple
+    context = {
+        'universidades':universidades_qs,
+    }
+    return render(request, 'universidades/universidades.html', context)
+
+def carga_view(request):
+    form = UniversidadChoiceForm(request.POST or None)
+    if request.method == 'POST':
+        if 'aceptar' in request.POST:
+            print("Aceptado")      
+            universidad = request.POST.get('universidad')
+            num_grados,num_centros,num_asignaturas = populate_bd(universidad)
+            mensaje = "Se han registrado "+str(num_grados)+"grados, " +str(num_centros)+" centros y "+str(num_asignaturas)+" asignaturas."
+            return render(request, 'universidades/carga.html',{'mensaje':mensaje})
+        else:
+            return redirect('/')
+
+    context = {
+        'form':form,
+    }
+    return render(request, 'universidades/confirmacion.html',context)
+
+def grados_from_centro_view(request):
+    form = CentroChoiceForm(request.POST or None)
+    grados = None
+    if request.method == 'POST':
+        centro = request.POST.get('centro')
+        print(centro)
+        grados = Grado.objects.filter(centro__id=centro)
+        extrainfo = request.POST.get('extrainfo')
+        print(extrainfo)
+    context = {
+        'form':form,
+        'grados':grados,
+    }
+    return render(request, 'universidades/grados_centro.html', context)
+
+class GradoDetailView(DetailView):
+    model = Grado
+    template_name = "universidades/grado-detail.html"

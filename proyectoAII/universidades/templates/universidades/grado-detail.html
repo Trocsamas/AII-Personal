@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {{object.nombre}}
+{% endblock title %}
+
+{% block content %}
+<h1>{{object.nombre}}</h1>
+<h4>Tabla de Asignaturas</h4>
+<div class="table-responsive-sm">
+<table class="table table-hover table-bordered">
+  <thead>
+    <tr>    
+      <th>Nombre</th>
+      <th>Código</th>
+      <th>Curso</th>
+      <th>Créditos</th>
+      <th>Tipo de Asignatura</th>
+    </tr>    
+  </thead>
+  <tbody>
+    {% for asignatura in object.asignatura_set.all %}
+      <tr>    
+        <td>{{asignatura.nombre}}</li>
+        <td>{{asignatura.codigo}}</li>
+        <td>{{asignatura.curso}}</li>
+        <td>{{asignatura.creditos}}</li>
+        <td>{{asignatura.tipo_asignatura}}</li>
+      </tr> 
+    {% endfor %}
+  </tbody>
+</div>
+
+
+{% endblock content %}
+

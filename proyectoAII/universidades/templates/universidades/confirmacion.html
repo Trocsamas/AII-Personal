@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+Confirmación
+{% endblock title %}
+
+{% block content %}
+
+
+<div class="text-center">
+    <h3 class="mt-5">Aviso</h3>
+    Este proceso es lento, borra la base de datos actual y requiere conexion a internet.
+    El proceso dependiendo de la universidad puede ser superior a una hora y media.
+</div>
+<form action="" method="POST">
+    {% csrf_token %}
+    {{form|crispy}}
+    <input type="submit" name="aceptar" class="btn btn-primary mt-3" value="Aceptar"></input>
+    <input type="submit" class="btn btn-primary mt-3" value="Cancelar"></input>
+</form>
+
+
+
+{% endblock content %}

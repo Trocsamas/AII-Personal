@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+Grados por Centro
+{% endblock title %}
+
+{% block content %}
+
+
+<form name="centro-form" action="" method="POST">
+    {% csrf_token %}
+    {{form|crispy}}
+    <button type="submit" class="btn btn-primary mt-3">Buscar</button>
+</form>
+
+{% if grados %}
+<table style="width:100%">
+    <tr>
+        <th>Nombre</th>
+        <th>Nota de Acceso</th>
+        <th>Centro Responsable</th>
+        <th>Información Extra</th>
+    </tr>
+{% for grado in grados %}
+    <tr>
+        <td>{{grado.nombre}}</td>
+        <td>{{grado.nota_acceso}}</td>
+        <td>{{grado.centro.nombre}}</td>
+        <td>
+        <a href="{{grado.get_absolute_url}}">Ver más</a>
+        </td>
+    </tr>
+{% endfor %}
+</table> 
+
+{% if infoextra %}
+
+{% endif %}
+{% endif %}
+
+{% endblock content %}

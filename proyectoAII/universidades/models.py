@@ -22,7 +22,7 @@ class Centro(models.Model):
     class Meta:
         unique_together = [['nombre', 'localidad']]
     def __str__(self):
-        return self.nombre
+        return self.nombre + " - " + self.universidad.nombre
 
     def get_absolute_url(self):
         return reverse("Centro_detail", kwargs={"pk": self.pk})
@@ -32,7 +32,11 @@ class Grado(models.Model):
     nombre = models.CharField(max_length=150)
     nota_acceso = models.FloatField(null=True, blank=True)
     centro = models.ForeignKey(Centro, on_delete=models.CASCADE)
+    rama_conocimiento = models.CharField(max_length=50, null=True, blank=True)
+
+    
     class Meta:
+        ordering = ('centro',)
         unique_together = [['nombre', 'centro']]
 
     def __str__(self):
@@ -47,6 +51,7 @@ class Departamento(models.Model):
     centro = models.ForeignKey(Centro, on_delete=models.CASCADE)
     
     class Meta:
+        ordering = ('centro',)
         unique_together = [['nombre', 'centro']]
 
     def __str__(self):
@@ -63,9 +68,16 @@ class Asignatura(models.Model):
     codigo = models.CharField(max_length=10, unique=True)
     creditos = models.FloatField(null=True, blank=True)
     tipo_asignatura = models.CharField(max_length=50)
-    rama_conocimiento = models.CharField(max_length=50)
     duracion = models.CharField(max_length=20, null=True, blank=True)
     departamento = models.ForeignKey(Departamento, on_delete=models.SET_NULL, null = True, blank=True)
+
+
+    class Meta:
+        # Esto es debido a que en algunas universidades una asignatura
+        # se repite en distintos grados sin cambiar el codigo por tanto
+        # si hacemos unique together no hay más problemas
+    
+        unique_together = [['codigo', 'grado']]
 
     def __str__(self):
         return self.nombre

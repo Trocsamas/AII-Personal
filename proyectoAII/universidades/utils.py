@@ -1,27 +1,51 @@
 from .models import Universidad, Centro, Grado, Departamento, Asignatura
 
+#Imports para el Scrapping
 from bs4 import BeautifulSoup
 import urllib.request
 
+#Imports para la indexación mediante whoosh
+from whoosh.index import create_in,open_dir
+from whoosh.fields import Schema, TEXT, DATETIME, ID, KEYWORD
+from whoosh.qparser import QueryParser
+from whoosh.qparser import MultifieldParser
+
 from time import sleep
 
-
 import traceback
+import os
+
 
 def populate_bd(universidad):
+
+    schem_grado = Schema(gradoId=ID(Stored=True),
+                    nombre=TEXT(stored=True),
+                    descripcion=TEXT(stored=True),
+                    perfil_recomendado=TEXT(stored=True),
+                    objetivos=TEXT(stored=True),
+                    competencias=TEXT(stored=True),
+                    salida_profesional=TEXT(stored=True),
+                    url=ID(stored=True),
+                    )
     
-        if universidad == "Buscar en todas":
-            return universidad_sevilla("Universidad de Sevilla") + universidad_jaen("Universidad de Jaén")
-        elif universidad == "Universidad de Sevilla":  
-            return universidad_sevilla(universidad)
-        elif universidad == "Universidad de Granada":  
-            return universidad_granada(universidad)
-        elif universidad == "Universidad de Jaén":  
-            return universidad_jaen(universidad)
-        else: return (0,0,0)
+    #Comprobamos si no hay un index
+    if not os.path.exists("Index-Grados"):
+        os.mkdir("Index-Grados")
+        ix = create_in("Index-Grados", schema=schem_grado)
+
+    if universidad == "Buscar en todas":
+        return universidad_sevilla("Universidad de Sevilla") + universidad_jaen("Universidad de Jaén")
+    elif universidad == "Universidad de Sevilla":  
+        return universidad_sevilla(universidad)
+    elif universidad == "Universidad de Granada":  
+        return universidad_granada(universidad)
+    elif universidad == "Universidad de Jaén":  
+        return universidad_jaen(universidad)
+    else: return (0,0,0)
     
 
 def universidad_sevilla(universidad):
+
     url_us = "https://www.us.es"
     url_principal="https://www.us.es/estudiar/que-estudiar/grados-por-orden-alfabetico"
     grados = list()
@@ -55,11 +79,19 @@ def universidad_sevilla(universidad):
 
     urls_grados = extraer_urls_grados_us(url_principal)
 
+    #Abrimos el indice
+    ix = open_dir("Index-Grados")
+
+    #creamos un writer para poder añadir documentos al indice
+    writer = ix.writer()
+
     for url in urls_grados[::15]:
         try:
             f = urllib.request.urlopen(url_us + url)
             s = BeautifulSoup(f,'lxml')
-            
+            #Tiempo de espera tras cada peticion a la US
+            sleep(90)
+
             nombre = " ".join(s.find("h1", class_="grado").getText().split())
             nombre_centro = s.find('div', class_="field--name-field-centro-s-responsables-del-").getText().replace("\n","")
 
@@ -106,10 +138,50 @@ def universidad_sevilla(universidad):
                 )
                 if asignatura_creada:
                     num_asignaturas+=1
-            sleep(90)
+            
+            # Código lioso que busca la descripción
+            #  y quita información irrelevante
+            # (lo del idioma se mantiene porque es importante)
+            # y regular que se encuentra en todas las descripciones de la US,
+            # y por tanto no importa que se le aplique a todo.
+
+            descripcion=[]
+            texto = [text for text in 
+                    s.find("div",class_="field--name-field-presentacion-y-guia")
+                    .stripped_strings]
+            for text in texto:
+                descripcion.append(text)
+                if  "MCERL" in text:
+                    break
+            descripcion = " ".join(descripcion)
+
+            # Función para dejar el código más limpio
+            def scrapeoyformateo(clase):
+                return " ".join([text for text in 
+                    s.find("div",class_=clase)
+                    .stripped_strings])
+
+            perfil = scrapeoyformateo("field--name-field-perfil-recomendado")
+            objetivos = scrapeoyformateo("field--name-field-objetivos")
+            competencias = scrapeoyformateo("field--name-field-competencias")
+            salidas = scrapeoyformateo("field--name-field-salidas-profesionales")
+
+            writer.add_document(gradoId=grado_obj.pk,
+                    nombre=str(grado_obj.nombre),
+                    descripcion=str(descripcion),
+                    perfil_recomendado=str(perfil),
+                    objetivos=str(objetivos),
+                    competencias=str(competencias),
+                    salida_profesional=str(salidas),
+                    url=url_us + url,
+                    )
+
         except Exception:
             traceback.print_exc()
+            #En caso de un time-out la espera es mayor
             sleep(120)
+
+    writer.commit()
     return (num_grados,num_centros,num_asignaturas)
 
 def universidad_jaen(universidad):

@@ -3,17 +3,20 @@ from .models import Universidad, Centro, Grado, Departamento, Asignatura
 #Imports para el Scrapping
 from bs4 import BeautifulSoup
 import urllib.request
+from time import sleep
 
 #Imports para la indexación mediante whoosh
 from whoosh.index import create_in,open_dir
 from whoosh.fields import Schema, TEXT, DATETIME, ID, KEYWORD
 from whoosh.qparser import QueryParser
 from whoosh.qparser import MultifieldParser
-
-from time import sleep
-
-import traceback
 import os
+
+#Imports de funciones adicionales
+from utils_pdf import abreSacaBorraPDF
+
+#Imports para mi
+import traceback
 
 
 def populate_bd(universidad):
@@ -221,11 +224,17 @@ def universidad_jaen(universidad):
 
     urls_grados = extraer_urls_grados_uja(url_principal)
 
+    #Abrimos el indice
+    ix = open_dir("Index-Grados")
+
+    #creamos un writer para poder añadir documentos al indice
+    writer = ix.writer()
+
     for url in urls_grados[::15]:
         try:
             f = urllib.request.urlopen(url_uja + url)
             s = BeautifulSoup(f,'lxml')
-
+            sleep(90)
             print(url_uja +url)
             nombre_centro = s.find("div", class_="field--name-field-centro").find("div", class_="field__item").getText().strip()
             localidad = s.find("div", class_="field--name-field-campus").find("div", class_="field__item").getText()
@@ -243,12 +252,12 @@ def universidad_jaen(universidad):
             )
             num_centros += 1 if creado else 0
 
-
             nombre_grado = s.find("h1",class_="estudios__titulo").getText()
             grado_obj,creado = Grado.objects.get_or_create(
                 nombre =  nombre_grado,
                 centro = centro_obj,
             )
+
             num_grados += 1 if creado else 0
             # La página de la UJA es inconsistente por tanto hay que tener en cuenta
             hay_asignaturas_en_web = [a for a in s.findAll("h3") if 'Asignaturas y Profesorado' in a.getText()][0].find("button")
@@ -293,12 +302,13 @@ def universidad_jaen(universidad):
                             tipo_asignatura = tipo,
                         )
                         num_asignaturas += 1 if creado else 0
-                sleep(90)
+                
             else:
                 sleep(90)  
                 url_asigs = [a for a in s.findAll("h3") if "Asignaturas y Profesorado" in a.getText()][0].find("a")['href']
                 f = urllib.request.urlopen(url_asigs)
                 s = BeautifulSoup(f,'lxml')
+                sleep(90)
                 h2_asigs = s.find("div", class_="clearfix text-formatted field field--name-body field--type-text-with-summary field--label-hidden field__item").findAll("h2")
                 for h2 in h2_asigs:
                     #Para poder recorrer de forma decente las tablas,
@@ -350,11 +360,31 @@ def universidad_jaen(universidad):
                                 num_asignaturas += 1 if creado else 0
                             except Exception:
                                 traceback.print_exc()
-                sleep(90)
+            
+            descripcion = s.find("div",class_="field--name-field-texto").getText()
+            perfil = s.find("button",text="  Perfil de Ingreso\n").parent.next_sibling.next_sibling.getText().strip()
+            objetivos =  s.find("button",text="  Objetivos Principales\n").parent.next_sibling.next_sibling.getText().replace("\n", " ").strip()
+            url_mem = s.find("span",class_="file--mime-application-pdf").find("a")['href']
+            competencias = abreSacaBorraPDF(url_mem)
+            salidas =  s.find("button",text="  Salidas profesionales\n").parent.next_sibling.getText().strip()
+            
+            writer.add_document(gradoId=grado_obj.pk,
+                    nombre=str(grado_obj.nombre),
+                    descripcion=str(descripcion),
+                    perfil_recomendado=str(perfil),
+                    objetivos=str(objetivos),
+                    competencias=str(competencias),
+                    salida_profesional=str(salidas),
+                    url=url_uja + url,
+                    )
+
         except Exception:
             traceback.print_exc()
             sleep(120)
+
+    writer.commit()
     return (num_grados,num_centros,num_asignaturas)
+
 
 def save_logo(url, name):
     nombre = "media/universidades/"+name+url[-4:]

@@ -13,7 +13,7 @@ from whoosh.qparser import MultifieldParser
 import os
 
 #Imports de funciones adicionales
-from utils_pdf import abreSacaBorraPDF
+from utils_pdf import abreSacaCompetenciasBorraPDF
 
 #Imports para mi
 import traceback
@@ -44,7 +44,6 @@ def populate_bd(universidad):
         return universidad_jaen(universidad)
     else: return (0,0,0)
     
-
 def universidad_sevilla(universidad):
     #Borramos los datos de la US que pueda haber
     Universidad.objects.filter(nombre=universidad).delete()
@@ -353,7 +352,7 @@ def universidad_jaen(universidad):
             perfil = s.find("button",text="  Perfil de Ingreso\n").parent.next_sibling.next_sibling.getText().strip()
             objetivos =  s.find("button",text="  Objetivos Principales\n").parent.next_sibling.next_sibling.getText().replace("\n", " ").strip()
             url_mem = s.find("span",class_="file--mime-application-pdf").find("a")['href']
-            competencias = abreSacaBorraPDF(url_mem)
+            competencias = abreSacaCompetenciasBorraPDF(url_mem)
             salidas =  s.find("button",text="  Salidas profesionales\n").parent.next_sibling.getText().strip()
             writer.add_document(gradoId=grado_obj.pk,
                     nombre=str(grado_obj.nombre),
@@ -372,8 +371,12 @@ def universidad_jaen(universidad):
     writer.commit()
     return (num_grados,num_centros,num_asignaturas)
 
+def universidad_granada(universidad):
+    pass
+    
 
 def save_logo(url, name):
     nombre = "media/universidades/"+name+url[-4:]
     urllib.request.urlretrieve(url, nombre)
     return nombre[6:]
+

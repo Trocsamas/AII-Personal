@@ -32,7 +32,7 @@ def analizePDF(pdfReader):
 def deletePDF():
     remove("PDF.pdf")
 
-def abreSacaBorraPDF(url):
+def abreSacaCompetenciasBorraPDF(url):
     pdfReader = openPDF(url)
     competencias = analizePDF(pdfReader)
     deletePDF()

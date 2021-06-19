@@ -8,8 +8,7 @@ from time import sleep
 #Imports para la indexación mediante whoosh
 from whoosh.index import create_in,open_dir
 from whoosh.fields import Schema, TEXT, DATETIME, ID, KEYWORD
-from whoosh.qparser import QueryParser
-from whoosh.qparser import MultifieldParser
+
 import os
 
 #Imports de funciones adicionales
@@ -54,7 +53,7 @@ def universidad_sevilla(universidad):
     # Hacemos la petición al servidor
     f = urllib.request.urlopen(url_us)
     s = BeautifulSoup(f,"lxml")
-    # Metemos un pequeño tiempo de espera para evitar un fallo
+    # Metemos un pequeño tiempo de espera para evitar un fallo en la siguiente peticion
     sleep(30)
     # Datos fáciles donde no merece la pena hacer scrapping
     nombre = universidad
@@ -88,11 +87,11 @@ def universidad_sevilla(universidad):
         # Lo metemos en un bloque try para evitar la interrupción en caso de un
         # timeout por el servidor
         try:
+            # Tiempo de espera tras cada peticion a la US
+            sleep(90)
             # Hacemos la peticion para buscar la información del grado
             f = urllib.request.urlopen(url_us + url)
             s = BeautifulSoup(f,'lxml')
-            # Tiempo de espera tras cada peticion a la US
-            sleep(90)
             # Iniciamos la extraccion de datos
             nombre = " ".join(s.find("h1", class_="grado").getText().split())
             nombre_centro = s.find('div',class_="field--name-field-centro-s-responsables-del-")
@@ -372,7 +371,7 @@ def universidad_jaen(universidad):
     return (num_grados,num_centros,num_asignaturas)
 
 def universidad_granada(universidad):
-    pass
+    return (0,0,0)
     
 
 def save_logo(url, name):

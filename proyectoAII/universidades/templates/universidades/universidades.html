@@ -1,21 +1,24 @@
-{% extends 'base.html' %} {% block title %} Universidades {% endblock title %} {% block content %}
-<table class="table table-hover table-bordered w-auto">
-    <thead>
-        <tr>
-            <th>Logo</th>
-            <th>Nombre</th>
-            <th>Localidad</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for universidad in universidades %}
-        <tr>
-            <td><img style="max-height: 75px; max-width: 75px;" src='/media/{{universidad.logo}}' /></td>
-            <td>{{universidad.nombre}}</td>
-            <td>{{universidad.localidad}}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+{% extends 'base.html' %} 
 
+{% block title %} Universidades {% endblock title %}
+
+{% block content %}
+    <table class="table table-hover table-bordered w-auto">
+        <thead>
+            <tr>
+                <th>Logo</th>
+                <th>Nombre</th>
+                <th>Localidad</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for universidad in universidades %}
+            <tr>
+                <td><img style="max-height: 75px; max-width: 75px;" src='/media/{{universidad.logo}}' /></td>
+                <td>{{universidad.nombre}}</td>
+                <td>{{universidad.localidad}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 {% endblock content %}

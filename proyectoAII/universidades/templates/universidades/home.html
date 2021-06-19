@@ -6,5 +6,28 @@ Inicio
 
 {% block content %}
 
+<div class="card-deck">
+{% for universidad in universidades %}
+    <div class="col-sm-6">
+        <div class="card">
+            <img class="card-img-top" src='media/{{universidad.logo}}' alt="Card image cap">  
+            <div class="card-body">
+                {{universidad.Nombre}}
+            <a href="#" class="btn btn-primary">Más Información</a>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+</div>
+
+{% for grado,grado_info in grados %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">{{grado.nombre}}</h5>
+            <p class="card-text">{{grado_info."descripcion"}}</p>
+            <a href="{{grado.get_absolute_url}}" class="btn btn-primary">Más Información</a>
+        </div>
+    </div>
+{% endfor %}
 
 {% endblock content %}

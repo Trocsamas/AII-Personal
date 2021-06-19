@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView
-
+from whoosh.index import open_dir
 
 from .models import Universidad, Grado, Centro
 from .forms import (
@@ -8,19 +8,37 @@ from .forms import (
     CentroChoiceForm, 
 )
 from .utils import populate_bd
+
+from whoosh.qparser import QueryParser
 import pandas as pd
-
-
+import random
 
 # Create your views here.
 def home_view(request):
-    return render(request, 'universidades/home.html', {})
+    universidades_qs = Universidad.objects.all()
+    context = {
+        'universidades': universidades_qs,
+    }
+    return render(request, 'universidades/home.html', context)
+
 
 def universities_list(request):
     universidades_qs = Universidad.objects.all()
     #De momento está simple
+    grados_qs = list(Grado.objects.all())
+    grados_rand = random.sample(grados_qs,3)
+    ix = open_dir("Index-Grados")
+    with ix.searcher() as searcher:
+        results = []
+        for grado in grados_rand:
+            query = QueryParser("gradoId", ix.schema).parse(str(grado.pk))
+            results.append(searcher.search(query)[0])
+    
+
     context = {
         'universidades':universidades_qs,
+        'grados':zip(grados_rand,results),
+
     }
     return render(request, 'universidades/universidades.html', context)
 
@@ -43,8 +61,6 @@ def carga_view(request):
             return render(request, 'universidades/confirmacion.html',context)
         else:
             return redirect('/')
-
-    
     return render(request, 'universidades/confirmacion.html',context)
 
 def grados_from_centro_view(request):

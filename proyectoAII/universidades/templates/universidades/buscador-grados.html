@@ -1,0 +1,17 @@
+{% extends 'base.html' %}{% load crispy_forms_tags %}
+
+{% block title %}
+    {{object.nombre}}
+{% endblock title %}
+
+{% block content %}
+    <form action="" method="POST">
+        {% csrf_token %}{{form|crispy}}
+        <input type="submit" name="aceptar" class="btn btn-primary mt-3" value="Aceptar"></input>
+    </form>
+    {% if grados %}
+        {% for grado in grados %}
+        
+        {% endfor %}
+    {% endif %}
+{% endblock content %}

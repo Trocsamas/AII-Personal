@@ -12,7 +12,7 @@ class Universidad(models.Model):
         return self.nombre
 
     def get_absolute_url(self):
-        return reverse("Universidad_detail", kwargs={"pk": self.pk})
+        return reverse("universidades:univesidad-detail", kwargs={"pk": self.pk})
 
 class Centro(models.Model):
 
@@ -28,22 +28,20 @@ class Centro(models.Model):
         return reverse("Centro_detail", kwargs={"pk": self.pk})
 
 class Grado(models.Model):
-
     nombre = models.CharField(max_length=150)
     nota_acceso = models.FloatField(null=True, blank=True)
     centro = models.ForeignKey(Centro, on_delete=models.CASCADE)
     rama_conocimiento = models.CharField(max_length=50, null=True, blank=True)
-
-    
     class Meta:
         ordering = ('centro',)
         unique_together = [['nombre', 'centro']]
-
     def __str__(self):
         return self.nombre
-
     def get_absolute_url(self):
         return reverse("universidades:grado-detail", kwargs={"pk": self.pk})
+
+    def get_id(self):
+        return self.pk
 
 class Departamento(models.Model):
 

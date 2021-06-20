@@ -13,3 +13,18 @@ class UniversidadChoiceForm(forms.Form):
     
 class CentroChoiceForm(forms.Form):
     centro = forms.ModelChoiceField(queryset=Centro.objects.all(), empty_label="Mostrar Todos", required=False)
+
+BUSCADORES = [
+    ('descripcion',"Por Descripción"),
+    ('perfil_recomendado',"Por Perfil Recomendado"),
+    ('objetivos',"Por Objetivos"),
+    ('salida_profesional', "Por Salidas")
+]
+
+class GradoSearchForm(forms.Form):
+    texto_a_buscar = forms.CharField(max_length=255, required=True)
+    tipo_de_busqueda = forms.MultipleChoiceField(
+        widget=forms.CheckboxSelectMultiple,
+        choices=BUSCADORES,
+        required=True,
+        )

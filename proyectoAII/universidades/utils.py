@@ -3,49 +3,53 @@ from .models import Universidad, Centro, Grado, Departamento, Asignatura
 #Imports para el Scrapping
 from bs4 import BeautifulSoup
 import urllib.request
+
 from time import sleep
 
 #Imports para la indexación mediante whoosh
 from whoosh.index import create_in,open_dir
-from whoosh.fields import Schema, TEXT, DATETIME, ID, KEYWORD
+from whoosh.fields import Schema, TEXT, ID, KEYWORD
 
 import os
 
 #Imports de funciones adicionales
-from utils_pdf import abreSacaCompetenciasBorraPDF
+from .utils_pdf import abreSacaCompetencias
 
 #Imports para mi
 import traceback
 
+import numpy as np
+
 def populate_bd(universidad):
-    
+    print("Iniciamos la poblacion de la "+universidad)
     #Comprobamos si no hay un index
     if not os.path.exists("Index-Grados"):
         # Creamos el esquema
-        schem_grado = Schema(gradoId=ID(Stored=True),
+        schem_grado = Schema(gradoId=ID(stored=True),
                     nombre=TEXT(stored=True),
                     descripcion=TEXT(stored=True),
                     perfil_recomendado=TEXT(stored=True),
                     objetivos=TEXT(stored=True),
                     competencias=TEXT(stored=True),
                     salida_profesional=TEXT(stored=True),
+                    universidad=TEXT(stored=True),
                     url=ID(stored=True),
                     )
         os.mkdir("Index-Grados")
         create_in("Index-Grados", schema=schem_grado)
     if universidad == "Buscar en todas":
-        return universidad_sevilla("Universidad de Sevilla") + universidad_jaen("Universidad de Jaén")
+        return np.sum([universidad_sevilla("Universidad de Sevilla"),universidad_jaen("Universidad de Jaén")],axis=0)
     elif universidad == "Universidad de Sevilla":  
         return universidad_sevilla(universidad)
     elif universidad == "Universidad de Granada":  
         return universidad_granada(universidad)
     elif universidad == "Universidad de Jaén":  
         return universidad_jaen(universidad)
-    else: return (0,0,0)
+    else: return [0,0,0]
     
 def universidad_sevilla(universidad):
-    #Borramos los datos de la US que pueda haber
-    Universidad.objects.filter(nombre=universidad).delete()
+    # Función de borrado de las universidades y sus grados
+    borradoConjuntoUniversidad(universidad)
     # Cargamos las url de la US
     url_us = "https://www.us.es"
     url_principal="https://www.us.es/estudiar/que-estudiar/grados-por-orden-alfabetico"
@@ -67,6 +71,7 @@ def universidad_sevilla(universidad):
         logo=logo_name,
         localidad = localidad,
         )
+    print("Se ha creado la "+str(universidad_obj))
     # Definimos una funcion local para extraer la url de los grados de la US
     def extraer_urls_grados_us(url_principal):
         f = urllib.request.urlopen(url_principal)
@@ -83,7 +88,8 @@ def universidad_sevilla(universidad):
     # Creamos un writer para poder añadir documentos al indice
     writer = ix.writer()
     # Recorremos la lista de grados
-    for url in urls_grados[::15]:
+    print("Cargando los grados")
+    for url in urls_grados[::20]:
         # Lo metemos en un bloque try para evitar la interrupción en caso de un
         # timeout por el servidor
         try:
@@ -102,7 +108,7 @@ def universidad_sevilla(universidad):
                 universidad = universidad_obj,
                 )
             if centro_creado:
-                print("Se ha creado el centro" + str(centro_obj))
+                print("Se ha creado el centro " + str(centro_obj))
                 num_centros+=1
             rama = s.find('div', class_="field--name-field-rama-de-conocimiento").getText().replace("\n","")
             grado_obj, grado_creado = Grado.objects.get_or_create(
@@ -157,27 +163,32 @@ def universidad_sevilla(universidad):
             competencias = scrapeoyformateo("field--name-field-competencias")
             salidas = scrapeoyformateo("field--name-field-salidas-profesionales")
             # Indexamos el grado en whoosh con información más amplia
-            writer.add_document(gradoId=grado_obj.pk,
+            writer.add_document(gradoId=str(grado_obj.pk),
                     nombre=str(grado_obj.nombre),
                     descripcion=str(descripcion),
                     perfil_recomendado=str(perfil),
                     objetivos=str(objetivos),
                     competencias=str(competencias),
                     salida_profesional=str(salidas),
-                    url=url_us + url,
+                    universidad=str(universidad),
+                    url=str(url_us + url),
                     )
+        except AttributeError as e:
+            #En caso de un error con Beautifulsoup se borra el grado
+            print("Fallo en la extraccion del "+ grado_obj)
+            print(e)
+            Grado.objects.get(grado_obj).delete()
         except Exception:
-            traceback.print_exc()
-            #En caso de un time-out la espera es mayor
+            traceback.print_exec()
             sleep(120)
     # Feedback por consola
     print("Se han creado {1} centros, {0} grados y {2} asignaturas".format(num_grados,num_centros,num_asignaturas))
     writer.commit()
-    return (num_grados,num_centros,num_asignaturas)
+    return [num_grados,num_centros,num_asignaturas]
 
 def universidad_jaen(universidad):
-    #Borramos los datos de la US que pueda haber
-    Universidad.objects.filter(nombre=universidad).delete()
+    # Función de borrado de las universidades y sus grados
+    borradoConjuntoUniversidad(universidad)
     # Cargamos las url de la UJA
     url_uja = "https://www.ujaen.es/"
     url_principal = "https://www.ujaen.es/estudios/oferta-academica/grados"
@@ -219,7 +230,7 @@ def universidad_jaen(universidad):
     #creamos un writer para poder añadir documentos al indice
     writer = ix.writer()
     # Recorremos la lista de grados
-    for url in urls_grados[::15]:
+    for url in urls_grados[::20]:
         try:
             # Lo metemos en un bloque try para evitar la interrupción en caso de un
             # timeout por el servidor
@@ -298,9 +309,9 @@ def universidad_jaen(universidad):
                 sleep(90)  
                 url_asigs = [a for a in s.findAll("h3") if "Asignaturas y Profesorado" in a.getText()][0].find("a")['href']
                 f = urllib.request.urlopen(url_asigs)
-                s = BeautifulSoup(f,'lxml')
+                s2 = BeautifulSoup(f,'lxml')
                 sleep(90)
-                h2_asigs = s.find("div", class_="clearfix text-formatted field field--name-body field--type-text-with-summary field--label-hidden field__item").findAll("h2")
+                h2_asigs = s2.find("div", class_="clearfix text-formatted field field--name-body field--type-text-with-summary field--label-hidden field__item").findAll("h2")
                 for h2 in h2_asigs:
                     #Para poder recorrer de forma decente las tablas,
                     # se va a recurrir a los titulos y buscar los hermanos
@@ -351,27 +362,34 @@ def universidad_jaen(universidad):
             perfil = s.find("button",text="  Perfil de Ingreso\n").parent.next_sibling.next_sibling.getText().strip()
             objetivos =  s.find("button",text="  Objetivos Principales\n").parent.next_sibling.next_sibling.getText().replace("\n", " ").strip()
             url_mem = s.find("span",class_="file--mime-application-pdf").find("a")['href']
-            competencias = abreSacaCompetenciasBorraPDF(url_mem)
-            salidas =  s.find("button",text="  Salidas profesionales\n").parent.next_sibling.getText().strip()
-            writer.add_document(gradoId=grado_obj.pk,
+            competencias = abreSacaCompetencias(url_mem)
+            os.remove("PDF.pdf")
+            salidas = s.find("button",text="  Salidas Profesionales\n").parent.next_sibling.next_sibling.getText().strip()
+            writer.add_document(gradoId=str(grado_obj.pk),
                     nombre=str(grado_obj.nombre),
                     descripcion=str(descripcion),
                     perfil_recomendado=str(perfil),
                     objetivos=str(objetivos),
                     competencias=str(competencias),
                     salida_profesional=str(salidas),
-                    url=url_uja + url,
+                    universidad=str(universidad),
+                    url=str(url_uja + url),
                     )
+        except AttributeError as e:
+            #En caso de un error con Beautifulsoup se borra el grado
+            print("Fallo en la extraccion del "+ grado_obj)
+            print(e)
+            Grado.objects.get(grado_obj).delete()
         except Exception:
-            traceback.print_exc()
             sleep(120)
+            traceback.print_exec()
     # Feedback por consola
     print("Se han creado {1} centros, {0} grados y {2} asignaturas".format(num_grados,num_centros,num_asignaturas))
     writer.commit()
-    return (num_grados,num_centros,num_asignaturas)
+    return [num_grados,num_centros,num_asignaturas]
 
 def universidad_granada(universidad):
-    return (0,0,0)
+    return [0,0,0]
     
 
 def save_logo(url, name):
@@ -379,3 +397,15 @@ def save_logo(url, name):
     urllib.request.urlretrieve(url, nombre)
     return nombre[6:]
 
+def borradoConjuntoUniversidad(universidad):
+    #Borramos los datos de la US que pueda haber
+    grados = Grado.objects.filter(centro__universidad__nombre=universidad)
+    id_grados_us = [x.get_id() for x in grados]
+    #Abrimos el indice
+    ix = open_dir("Index-Grados")
+    # Creamos un writer para poder eliminar documentos del indice y que no se desincronicen las bases de datos
+    writer = ix.writer()
+    for gradoId in id_grados_us:
+        writer.delete_by_term('gradoId',str(gradoId))
+    writer.commit()
+    Universidad.objects.filter(nombre=universidad).delete()

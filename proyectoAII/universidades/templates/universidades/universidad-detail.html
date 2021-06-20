@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {{object.nombre}}
+{% endblock title %}
+
+{% block content %}
+<h1>{{object.nombre}}</h1>
+<h4>Tabla de Asignaturas</h4>
+<div class="table-responsive-sm">
+<table class="table table-hover table-bordered">
+  <thead>
+    <tr>    
+      <th>Nombre</th>
+      <th>Rama de Conocimiento</th>
+    </tr>    
+  </thead>
+  <tbody>
+    {% for centro in object.centro_set.all %}
+      {% for grado in centro.grado_set.all %}
+        <tr>    
+          <td>{{grado.nombre}}</li>
+          <td>{{grado.rama_conocimiento}}</li>
+        </tr> 
+      {% endfor %}
+    {% endfor %}
+  </tbody>
+</div>
+
+
+{% endblock content %}
+

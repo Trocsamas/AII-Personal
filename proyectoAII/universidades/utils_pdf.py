@@ -10,9 +10,10 @@ def openPDF(url):
     urllib.request.urlretrieve(url,nombre)
     pdfFileObj = open(nombre, 'rb')
     pdfReader = PyPDF2.PdfFileReader(pdfFileObj)
-    return pdfReader
+    return (pdfReader,pdfFileObj)
 
-def analizePDF(pdfReader):
+def analizePDF(tuplapdf):
+    pdfReader,pdfFileObj = tuplapdf
     re_competencias = re.compile(r"(\nC[A-Z.\s]{1,9}\d{1,2}[\s]{1,2}- )")
     texto_doc = ""
     for page in range(0,pdfReader.getNumPages()):
@@ -24,16 +25,12 @@ def analizePDF(pdfReader):
         texto_doc+=text_page
     ls = re.split(re_competencias,texto_doc)[1:]
     text = "\n".join([(x+y).replace("\n"," ") for x,y in zip(ls[::2],ls[1::2])])
-    print(text)
     re_pdfjunk = re.compile(r"([a-zI]{13}[\s:]{3}[0-9\s]{4,}[/\s\t\n]*[0-9]{1,})")
     text = re.sub(re_pdfjunk,"",text)
+    pdfFileObj.close()
     return text
 
-def deletePDF():
-    remove("PDF.pdf")
-
-def abreSacaCompetenciasBorraPDF(url):
+def abreSacaCompetencias(url):
     pdfReader = openPDF(url)
     competencias = analizePDF(pdfReader)
-    deletePDF()
     return competencias

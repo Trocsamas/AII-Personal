@@ -5,29 +5,44 @@ Inicio
 {% endblock title %}
 
 {% block content %}
-
-<div class="card-deck">
-{% for universidad in universidades %}
-    <div class="col-sm-6">
-        <div class="card">
-            <img class="card-img-top" src='media/{{universidad.logo}}' alt="Card image cap">  
-            <div class="card-body">
-                {{universidad.Nombre}}
-            <a href="#" class="btn btn-primary">Más Información</a>
+{% if universidades %}
+<h3>Universidades Disponibles</h3>
+<div class="row row-cols-md-2">
+    {% for universidad in universidades %}
+     <div class="col">
+        <div class="card mb-3" style="max-width: 540px;">
+            <div class="row g-0">
+                <div class="col-md-4">
+                <img src="media/{{universidad.logo}}" alt="..." style="max-width:100%;">
+                </div>
+                <div class="col-md-8">
+                    <div class="card-body">
+                        <h5 class="card-title">{{universidad.nombre}}</h5>
+                        <a href="universidad/{{universidad.pk}}" class="btn btn-primary">Más Información</a>
+                </div>
+                </div>
             </div>
         </div>
     </div>
-{% endfor %}
+    {% endfor %}
 </div>
-
-{% for grado,grado_info in grados %}
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">{{grado.nombre}}</h5>
-            <p class="card-text">{{grado_info."descripcion"}}</p>
-            <a href="{{grado.get_absolute_url}}" class="btn btn-primary">Más Información</a>
-        </div>
-    </div>
-{% endfor %}
-
+<h3>Grados que disponemos</h3>
+<div class="card-group">
+    
+    {% for grado,result in data_grado %}
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{grado.nombre}}</h5>
+                    <p class="card-text" style="">{{result.descripcion|slice:":300"}}...</p>
+                </div>
+                <div class="card-footer">
+                    <a href="{{grado.get_absolute_url}}" class="btn btn-primary">Más Información</a>
+                </div> 
+            </div>
+    {% endfor %}
+</div>
+{% else %}
+<h3>La base de datos aún no ha sido poblada, para poblarla accesa al siguiente enlace</h3>
+<a class="btn btn-primary" href="/carga">Poblar la Base de Datos</a>
+{% endif %}
 {% endblock content %}

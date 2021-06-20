@@ -5,7 +5,8 @@ from whoosh.index import open_dir
 from .models import Universidad, Grado, Centro
 from .forms import (
     UniversidadChoiceForm, 
-    CentroChoiceForm, 
+    CentroChoiceForm,
+    GradoSearchForm,
 )
 from .utils import populate_bd
 
@@ -16,29 +17,31 @@ import random
 # Create your views here.
 def home_view(request):
     universidades_qs = Universidad.objects.all()
-    context = {
-        'universidades': universidades_qs,
-    }
+    if universidades_qs and Grado.objects.all():
+        ix = open_dir("Index-Grados")
+        with ix.searcher() as searcher:
+            all_grados = ix.searcher().documents()
+            all_grados = list(all_grados)
+            a3 = random.sample(all_grados,3 if len(all_grados)>=3 else len(all_grados))
+            gradoIds = [x['gradoId'] for x in a3]
+        grados = []
+        print(gradoIds)
+        for gradoId in gradoIds:
+            grados.append(Grado.objects.get(id=gradoId))
+        context = {
+            'universidades':universidades_qs,
+            'data_grado':zip(grados,a3),
+        }
+    else:
+        context={}
     return render(request, 'universidades/home.html', context)
 
 
 def universities_list(request):
     universidades_qs = Universidad.objects.all()
     #De momento está simple
-    grados_qs = list(Grado.objects.all())
-    grados_rand = random.sample(grados_qs,3)
-    ix = open_dir("Index-Grados")
-    with ix.searcher() as searcher:
-        results = []
-        for grado in grados_rand:
-            query = QueryParser("gradoId", ix.schema).parse(str(grado.pk))
-            results.append(searcher.search(query)[0])
-    
-
     context = {
         'universidades':universidades_qs,
-        'grados':zip(grados_rand,results),
-
     }
     return render(request, 'universidades/universidades.html', context)
 
@@ -79,6 +82,24 @@ def grados_from_centro_view(request):
     }
     return render(request, 'universidades/grados_centro.html', context)
 
+def busca_grados_view(request):
+    form_grado = GradoSearchForm(request.POST or None)
+    grados = None
+    if request.method == 'POST':
+        texto = request.POST.get('texto_a_buscar')
+        tags = request.POST.getlist ('tipo_de_busqueda')
+        print(texto)
+        print(tags)
+    context = {
+        'form':form_grado,
+        'grados':grados,
+    }
+    return render(request, 'universidades/buscador-grados.html', context)
+
 class GradoDetailView(DetailView):
     model = Grado
     template_name = "universidades/grado-detail.html"
+
+class UniversidadDetailView(DetailView):
+    model = Universidad
+    template_name = "universidades/universidad-detail.html"
